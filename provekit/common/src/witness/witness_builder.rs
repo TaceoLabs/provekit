@@ -7,6 +7,7 @@ use {
         },
         FieldElement,
     },
+    ark_std::{rand, rand::Rng},
     serde::{Deserialize, Serialize},
 };
 
@@ -109,8 +110,7 @@ pub enum WitnessBuilder {
     /// occurs in the bin op.
     MultiplicitiesForBinOp(usize, Vec<(ConstantOrR1CSWitness, ConstantOrR1CSWitness)>),
     /// U32 addition with carry: computes result = (a + b) % 2^32 and carry = (a
-    /// + b) / 2^32 Arguments: (result_witness_index, carry_witness_index,
-    ///   a, b)
+    /// + b) / 2^32 Arguments: (result_witness_index, carry_witness_index, a, b)
     U32Addition(usize, usize, ConstantOrR1CSWitness, ConstantOrR1CSWitness),
     /// AND operation: computes result = a & b
     /// Arguments: (result_witness_index, a, b)
@@ -120,6 +120,9 @@ pub enum WitnessBuilder {
     /// Arguments: (result_witness_index, a, b)
     /// Note: only for 32-bit operands
     Xor(usize, ConstantOrR1CSWitness, ConstantOrR1CSWitness),
+    /// A Bit-decomposition constraint
+    /// (source_witness, result_witnesses)
+    BitDecomposition(usize, Vec<usize>),
 }
 
 impl WitnessBuilder {
@@ -134,7 +137,58 @@ impl WitnessBuilder {
             }
             WitnessBuilder::MultiplicitiesForBinOp(..) => 2usize.pow(2 * BINOP_ATOMIC_BITS as u32),
             WitnessBuilder::U32Addition(..) => 2,
+            WitnessBuilder::BitDecomposition(_, result) => result.len(),
             _ => 1,
         }
+    }
+
+    /// Return the index of the first witness value that this builder writes to.
+    pub fn first_witness_idx(&self) -> usize {
+        match self {
+            WitnessBuilder::Constant(ConstantTerm(start_idx, _)) => *start_idx,
+            WitnessBuilder::Acir(start_idx, _) => *start_idx,
+            WitnessBuilder::Sum(start_idx, _) => *start_idx,
+            WitnessBuilder::Product(start_idx, ..) => *start_idx,
+            WitnessBuilder::MultiplicitiesForRange(start_idx, ..) => *start_idx,
+            WitnessBuilder::IndexedLogUpDenominator(start_idx, ..) => *start_idx,
+            WitnessBuilder::Challenge(start_idx) => *start_idx,
+            WitnessBuilder::Inverse(start_idx, _) => *start_idx,
+            WitnessBuilder::LogUpDenominator(start_idx, ..) => *start_idx,
+            WitnessBuilder::ProductLinearOperation(start_idx, ..) => *start_idx,
+            WitnessBuilder::DigitalDecomposition(dd_struct) => dd_struct.first_witness_idx,
+            WitnessBuilder::SpiceMultisetFactor(start_idx, ..) => *start_idx,
+            WitnessBuilder::SpiceWitnesses(spice_witnesses_struct) => {
+                spice_witnesses_struct.first_witness_idx
+            }
+            WitnessBuilder::BinOpLookupDenominator(start_idx, ..) => *start_idx,
+            WitnessBuilder::MultiplicitiesForBinOp(start_idx, _) => *start_idx,
+            WitnessBuilder::BitDecomposition(_, result) => result[0],
+            WitnessBuilder::U32Addition(start_idx, _, _, _) => *start_idx,
+            WitnessBuilder::And(start_idx, _, _) => *start_idx,
+            WitnessBuilder::Xor(start_idx, _, _) => *start_idx,
+        }
+    }
+}
+
+/// Mock transcript. To be replaced.
+pub struct MockTranscript {}
+
+impl Default for MockTranscript {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MockTranscript {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn append(&mut self, _value: FieldElement) {}
+
+    pub fn draw_challenge(&mut self) -> FieldElement {
+        let mut rng = rand::thread_rng();
+        let n: u32 = rng.r#gen();
+        n.into()
     }
 }

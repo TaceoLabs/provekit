@@ -20,14 +20,14 @@ noirc_artifacts.workspace = true
 # Cryptography and proof systems
 ark-ff.workspace = true
 ark-std.workspace = true
-whir.workspace = true
 
 # 3rd party
 anyhow.workspace = true
-postcard.workspace = true
-serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
+
+# TACEO related imports (what we need for our code):
+eyre.workspace = true
 
 [lints]
 workspace = true

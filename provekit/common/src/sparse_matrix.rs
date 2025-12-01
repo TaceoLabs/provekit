@@ -30,17 +30,17 @@ pub struct SparseMatrix {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HydratedSparseMatrix<'a> {
     pub matrix: &'a SparseMatrix,
-    interner:   &'a Interner,
+    interner: &'a Interner,
 }
 
 impl SparseMatrix {
     pub fn new(rows: usize, cols: usize) -> Self {
         Self {
-            num_rows:        rows,
-            num_cols:        cols,
+            num_rows: rows,
+            num_cols: cols,
             new_row_indices: vec![0; rows],
-            col_indices:     Vec::new(),
-            values:          Vec::new(),
+            col_indices: Vec::new(),
+            values: Vec::new(),
         }
     }
 
@@ -87,6 +87,19 @@ impl SparseMatrix {
                 for index in &mut self.new_row_indices[row + 1..] {
                     *index += 1;
                 }
+            }
+        }
+    }
+
+    /// Swap two column indices in a given row.
+    pub fn swap_indices(&mut self, row: usize, src_index: u32, target_index: u32) {
+        let row_range = self.row_range(row);
+        let cols = &mut self.col_indices[row_range];
+        for el in cols.iter_mut() {
+            if *el == src_index {
+                *el = target_index;
+            } else if *el == target_index {
+                *el = src_index;
             }
         }
     }

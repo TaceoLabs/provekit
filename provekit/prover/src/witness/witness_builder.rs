@@ -3,16 +3,17 @@ use {
     acir::native_types::WitnessMap,
     ark_ff::{BigInteger, PrimeField},
     ark_std::Zero,
+    co_acvm::{mpc::NoirWitnessExtensionProtocol, Rep3AcvmSolver, Rep3AcvmType},
+    mpc_core::protocols::rep3::Rep3PrimeFieldShare,
+    mpc_net::Network,
     provekit_common::{
-        skyscraper::SkyscraperSponge,
         utils::noir_to_native,
         witness::{
-            ConstantOrR1CSWitness, ConstantTerm, ProductLinearTerm, SumTerm, WitnessBuilder,
-            WitnessCoefficient, BINOP_ATOMIC_BITS,
+            ConstantOrR1CSWitness, ConstantTerm, MockTranscript, ProductLinearTerm, SumTerm,
+            WitnessBuilder, WitnessCoefficient, BINOP_ATOMIC_BITS,
         },
         FieldElement, NoirElement,
     },
-    spongefish::{codecs::arkworks_algebra::UnitToField, ProverState},
 };
 
 pub trait WitnessBuilderSolver {
@@ -20,8 +21,37 @@ pub trait WitnessBuilderSolver {
         &self,
         acir_witness_idx_to_value_map: &WitnessMap<NoirElement>,
         witness: &mut [Option<FieldElement>],
-        transcript: &mut ProverState<SkyscraperSponge, FieldElement>,
+        transcript: &mut MockTranscript,
     );
+
+    /// As per solve(), but additionally appends the solved witness values to
+    /// the transcript.
+    fn solve_and_append_to_transcript(
+        &self,
+        acir_witness_idx_to_value_map: &WitnessMap<NoirElement>,
+        witness: &mut [Option<FieldElement>],
+        transcript: &mut MockTranscript,
+    );
+
+    /// Solves for the witness value(s) specified by this builder and writes
+    /// them to the witness vector.
+    fn solve_rep3<N: Network>(
+        &self,
+        acir_witness_idx_to_value_map: &WitnessMap<Rep3AcvmType<FieldElement>>,
+        witness: &mut [Option<Rep3AcvmType<FieldElement>>],
+        driver: &mut Rep3AcvmSolver<FieldElement, N>,
+    ) -> eyre::Result<()>;
+
+    /// Solves for the witness value(s) specified by this builder and writes
+    /// them to the witness vector.
+    /// Gets an extra argument to handle bit decomposition more efficiently.
+    fn solve_rep3_with_bitdecomp_witness<N: Network>(
+        &self,
+        acir_witness_idx_to_value_map: &WitnessMap<Rep3AcvmType<FieldElement>>,
+        witness: &mut [Option<Rep3AcvmType<FieldElement>>],
+        bitdecomps_iter: &mut impl Iterator<Item = Rep3PrimeFieldShare<FieldElement>>,
+        driver: &mut Rep3AcvmSolver<FieldElement, N>,
+    ) -> eyre::Result<()>;
 }
 
 impl WitnessBuilderSolver for WitnessBuilder {
@@ -29,7 +59,7 @@ impl WitnessBuilderSolver for WitnessBuilder {
         &self,
         acir_witness_idx_to_value_map: &WitnessMap<NoirElement>,
         witness: &mut [Option<FieldElement>],
-        transcript: &mut ProverState<SkyscraperSponge, FieldElement>,
+        transcript: &mut MockTranscript,
     ) {
         match self {
             WitnessBuilder::Constant(ConstantTerm(witness_idx, c)) => {
@@ -91,9 +121,7 @@ impl WitnessBuilderSolver for WitnessBuilder {
                 }
             }
             WitnessBuilder::Challenge(witness_idx) => {
-                let mut one = [FieldElement::zero(); 1];
-                let _ = transcript.fill_challenge_scalars(&mut one);
-                witness[*witness_idx] = Some(one[0]);
+                witness[*witness_idx] = Some(transcript.draw_challenge());
             }
             WitnessBuilder::LogUpDenominator(
                 witness_idx,
@@ -265,6 +293,165 @@ impl WitnessBuilderSolver for WitnessBuilder {
                     lh_val.into_bigint() ^ rh_val.into_bigint(),
                 ));
             }
+            WitnessBuilder::BitDecomposition(src, des) => {
+                let src: FieldElement = witness[*src].unwrap();
+                let mut bits = src.into_bigint();
+                for d in des.iter() {
+                    let bit = bits.as_ref()[0] & 1;
+                    bits >>= 1;
+                    witness[*d] = Some(FieldElement::from(bit));
+                }
+            }
         }
+    }
+
+    fn solve_and_append_to_transcript(
+        &self,
+        acir_witness_idx_to_value_map: &WitnessMap<NoirElement>,
+        witness: &mut [Option<FieldElement>],
+        transcript: &mut MockTranscript,
+    ) {
+        self.solve(acir_witness_idx_to_value_map, witness, transcript);
+
+        for i in 0..self.num_witnesses() {
+            transcript.append(witness[self.first_witness_idx() + i].unwrap());
+        }
+    }
+
+    fn solve_rep3<N: Network>(
+        &self,
+        acir_witness_idx_to_value_map: &WitnessMap<Rep3AcvmType<FieldElement>>,
+        witness: &mut [Option<Rep3AcvmType<FieldElement>>],
+        driver: &mut Rep3AcvmSolver<FieldElement, N>,
+    ) -> eyre::Result<()> {
+        match self {
+            WitnessBuilder::Constant(ConstantTerm(witness_idx, c)) => {
+                witness[*witness_idx] = Some((*c).into());
+            }
+            WitnessBuilder::Acir(witness_idx, acir_witness_idx) => {
+                witness[*witness_idx] = Some(
+                    acir_witness_idx_to_value_map
+                        .get_index(*acir_witness_idx as u32)
+                        .unwrap()
+                        .to_owned(),
+                );
+            }
+            WitnessBuilder::Sum(witness_idx, operands) => {
+                let mut sum = Rep3AcvmType::default();
+
+                for SumTerm(coeff, witness_idx) in operands.iter() {
+                    let val = if let Some(coeff) = coeff {
+                        driver.mul_with_public(*coeff, witness[*witness_idx].to_owned().unwrap())
+                    } else {
+                        witness[*witness_idx].to_owned().unwrap()
+                    };
+                    sum = driver.add(sum, val);
+                }
+                witness[*witness_idx] = Some(sum);
+            }
+            WitnessBuilder::Product(witness_idx, operand_idx_a, operand_idx_b) => {
+                let a = witness[*operand_idx_a].to_owned().unwrap();
+                let b = witness[*operand_idx_b].to_owned().unwrap();
+                let mul = driver.mul(a, b)?;
+                witness[*witness_idx] = Some(mul);
+            }
+            WitnessBuilder::Inverse(witness_idx, operand_idx) => {
+                let operand = witness[*operand_idx].to_owned().unwrap();
+                let inv = driver.invert(operand)?;
+                witness[*witness_idx] = Some(inv);
+            }
+            WitnessBuilder::BitDecomposition(src, des) => {
+                let src = witness[*src].to_owned().unwrap();
+                match src {
+                    Rep3AcvmType::Public(val) => {
+                        let mut bits = val.into_bigint();
+                        for d in des.iter() {
+                            let bit = bits.as_ref()[0] & 1;
+                            bits >>= 1;
+                            witness[*d] = Some(Rep3AcvmType::from(FieldElement::from(bit)));
+                        }
+                    }
+                    Rep3AcvmType::Shared(val) => {
+                        let decomp = driver.decompose_arithmetic(val, des.len(), 1)?;
+                        debug_assert_eq!(des.len(), decomp.len());
+                        for (d, bit) in des.iter().zip(decomp) {
+                            witness[*d] = Some(Rep3AcvmType::from(bit));
+                        }
+                    }
+                }
+            }
+            x => panic!("Unsupported operation for Rep3 solving: {x:?}"),
+        }
+        Ok(())
+    }
+
+    fn solve_rep3_with_bitdecomp_witness<N: Network>(
+        &self,
+        acir_witness_idx_to_value_map: &WitnessMap<Rep3AcvmType<FieldElement>>,
+        witness: &mut [Option<Rep3AcvmType<FieldElement>>],
+        bitdecomps_iter: &mut impl Iterator<Item = Rep3PrimeFieldShare<FieldElement>>,
+        driver: &mut Rep3AcvmSolver<FieldElement, N>,
+    ) -> eyre::Result<()> {
+        match self {
+            WitnessBuilder::Constant(ConstantTerm(witness_idx, c)) => {
+                witness[*witness_idx] = Some((*c).into());
+            }
+            WitnessBuilder::Acir(witness_idx, acir_witness_idx) => {
+                witness[*witness_idx] = Some(
+                    acir_witness_idx_to_value_map
+                        .get_index(*acir_witness_idx as u32)
+                        .unwrap()
+                        .to_owned(),
+                );
+            }
+            WitnessBuilder::Sum(witness_idx, operands) => {
+                let mut sum = Rep3AcvmType::default();
+
+                for SumTerm(coeff, witness_idx) in operands.iter() {
+                    let val = if let Some(coeff) = coeff {
+                        driver.mul_with_public(*coeff, witness[*witness_idx].to_owned().unwrap())
+                    } else {
+                        witness[*witness_idx].to_owned().unwrap()
+                    };
+                    sum = driver.add(sum, val);
+                }
+                witness[*witness_idx] = Some(sum);
+            }
+            WitnessBuilder::Product(witness_idx, operand_idx_a, operand_idx_b) => {
+                let a = witness[*operand_idx_a].to_owned().unwrap();
+                let b = witness[*operand_idx_b].to_owned().unwrap();
+                let mul = driver.mul(a, b)?;
+                witness[*witness_idx] = Some(mul);
+            }
+            WitnessBuilder::Inverse(witness_idx, operand_idx) => {
+                let operand = witness[*operand_idx].to_owned().unwrap();
+                let inv = driver.invert(operand)?;
+                witness[*witness_idx] = Some(inv);
+            }
+            WitnessBuilder::BitDecomposition(src, des) => {
+                let src = witness[*src].to_owned().unwrap();
+                match src {
+                    Rep3AcvmType::Public(val) => {
+                        let mut bits = val.into_bigint();
+                        for d in des.iter() {
+                            let bit = bits.as_ref()[0] & 1;
+                            bits >>= 1;
+                            witness[*d] = Some(Rep3AcvmType::from(FieldElement::from(bit)));
+                        }
+                    }
+                    Rep3AcvmType::Shared(_) => {
+                        for d in des.iter() {
+                            let bit = bitdecomps_iter
+                                .next()
+                                .expect("Not enough bit decomposition witnesses provided");
+                            witness[*d] = Some(Rep3AcvmType::from(bit));
+                        }
+                    }
+                }
+            }
+            x => panic!("Unsupported operation for Rep3 solving: {x:?}"),
+        }
+
+        Ok(())
     }
 }

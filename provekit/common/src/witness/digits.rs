@@ -14,15 +14,15 @@ use {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DigitalDecompositionWitnesses {
     /// The log base of each digit (in little-endian order)
-    pub log_bases:                  Vec<usize>,
+    pub log_bases: Vec<usize>,
     /// The number of witnesses to decompose
     pub num_witnesses_to_decompose: usize,
     /// Witness indices of the values to be decomposed
-    pub witnesses_to_decompose:     Vec<usize>,
+    pub witnesses_to_decompose: Vec<usize>,
     /// The index of the first witness written to
-    pub first_witness_idx:          usize,
+    pub first_witness_idx: usize,
     /// The number of witnesses written to
-    pub num_witnesses:              usize,
+    pub num_witnesses: usize,
 }
 
 /// Compute a mixed-base decomposition of a field element into its digits, using
