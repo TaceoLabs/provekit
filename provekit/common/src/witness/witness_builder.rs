@@ -110,7 +110,7 @@ pub enum WitnessBuilder {
     MultiplicitiesForBinOp(usize, Vec<(ConstantOrR1CSWitness, ConstantOrR1CSWitness)>),
     /// U32 addition with carry: computes result = (a + b) % 2^32 and carry = (a
     /// + b) / 2^32 Arguments: (result_witness_index, carry_witness_index,
-    /// a, b)
+    ///   a, b)
     U32Addition(usize, usize, ConstantOrR1CSWitness, ConstantOrR1CSWitness),
     /// AND operation: computes result = a & b
     /// Arguments: (result_witness_index, a, b)

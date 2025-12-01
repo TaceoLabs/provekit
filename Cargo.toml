@@ -5,7 +5,7 @@ exclude = ["playground/passport-input-gen"]
 
 [workspace.package]
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.87"
 authors = [
   "Remco Bloemen <remco@world.org>",
   "Philipp Sippl <philipp@world.org>",
@@ -104,15 +104,15 @@ zeroize = "1.8.1"
 zstd = "0.13.3"
 
 # Noir language dependencies
-acir = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.11" }
-bn254_blackbox_solver = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.11" }
-nargo = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.11" }
-nargo_cli = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.11" }
-nargo_toml = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.11" }
-noir_artifact_cli = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.11" }
-noirc_abi = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.11" }
-noirc_artifacts = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.11" }
-noirc_driver = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.11" }
+acir = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
+bn254_blackbox_solver = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
+nargo = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
+nargo_cli = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
+nargo_toml = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
+noir_artifact_cli = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
+noirc_abi = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
+noirc_artifacts = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
+noirc_driver = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
 
 # Cryptography and proof systems
 ark-bn254 = { version = "0.5.0", default-features = false, features = [
@@ -130,3 +130,6 @@ spongefish-pow = { git = "https://github.com/arkworks-rs/spongefish", rev = "ecb
 whir = { git = "https://github.com/WizardOfMenlo/whir/", features = [
   "tracing",
 ], rev = "15cf6668e904ed2e80c9e6209dcce69f5bcf79b9" }
+
+
+# Our (TACEO) Imports
