@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["provekit/common", "provekit/r1cs-compiler"]
+members = [
+  "provekit/common",
+  "provekit/r1cs-compiler",
+  "provekit/prover",
+  "co-noir-to-r1cs",
+]
 exclude = ["playground/passport-input-gen"]
 
 [workspace.package]
@@ -54,14 +59,12 @@ opt-level = 3
 
 [workspace.dependencies]
 # Workspace members - ProveKit
-provekit-bench = { path = "tooling/provekit-bench" }
-provekit-cli = { path = "tooling/cli" }
 provekit-common = { path = "provekit/common" }
-provekit-gnark = { path = "tooling/provekit-gnark" }
 provekit-prover = { path = "provekit/prover" }
 provekit-r1cs-compiler = { path = "provekit/r1cs-compiler" }
 provekit-verifier = { path = "provekit/verifier" }
-provekit-verifier-server = { path = "tooling/verifier-server" }
+provekit-trace = { path = "provekit/trace" }
+co-noir-to-r1cs = { path = "co-noir-to-r1cs" }
 
 # 3rd party
 anyhow = "1.0.93"
@@ -79,7 +82,7 @@ primitive-types = "0.13.1"
 proptest = "1.6.0"
 quickcheck = "1.0.3"
 quickcheck_macros = "1.0.0"
-rand = "0.9.1"
+rand = "0.8.5"
 rand08 = { package = "rand", version = "0.8" }
 rayon = "1.10.0"
 reqwest = "0.12.23"
@@ -104,15 +107,15 @@ zeroize = "1.8.1"
 zstd = "0.13.3"
 
 # Noir language dependencies
-acir = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
-bn254_blackbox_solver = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
-nargo = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
-nargo_cli = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
-nargo_toml = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
-noir_artifact_cli = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
-noirc_abi = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
-noirc_artifacts = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
-noirc_driver = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.15" }
+acir = { version = "1.0.0-beta.15", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.15", package = "acir" }
+bn254_blackbox_solver = { version = "1.0.0-beta.15", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.15" }
+nargo = { version = "1.0.0-beta.15", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.15" }
+nargo_cli = { version = "1.0.0-beta.15", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.15" }
+nargo_toml = { version = "1.0.0-beta.15", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.15" }
+noir_artifact_cli = { version = "1.0.0-beta.15", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.15" }
+noirc_abi = { version = "1.0.0-beta.15", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.15" }
+noirc_artifacts = { version = "1.0.0-beta.15", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.15" }
+noirc_driver = { version = "1.0.0-beta.15", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.15" }
 
 # Cryptography and proof systems
 ark-bn254 = { version = "0.5.0", default-features = false, features = [
@@ -133,3 +136,26 @@ whir = { git = "https://github.com/WizardOfMenlo/whir/", features = [
 
 
 # Our (TACEO) Imports
+ark-circom = { version = "^0.5.0", git = "https://github.com/TaceoLabs/circom-compat.git", rev = "7f178fd", default-features = false, features = [
+  "r1cs_file",
+] }
+ark-ec = { version = "^0.5.0", default-features = false }
+ark-groth16 = "0.5.0"
+ark-relations = "^0.5.0"
+clap = { version = "4", features = ["derive", "env"] }
+circom-types = { package = "taceo-circom-types", version = "0.1.1", default-features = false }
+co-acvm = { version = "0.7.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "24bb6be6d19d6cc0a2ef5addaec904c795f1ae1f" }
+co-builder = { version = "0.5.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "24bb6be6d19d6cc0a2ef5addaec904c795f1ae1f" }
+co-circom = { version = "0.10.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "24bb6be6d19d6cc0a2ef5addaec904c795f1ae1f" }
+co-groth16 = { version = "0.10.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "24bb6be6d19d6cc0a2ef5addaec904c795f1ae1f" }
+co-noir = { version = "0.7.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "24bb6be6d19d6cc0a2ef5addaec904c795f1ae1f" }
+co-noir-common = { version = "0.2.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "24bb6be6d19d6cc0a2ef5addaec904c795f1ae1f" }
+co-noir-types = { version = "0.1.1", git = "https://github.com/TaceoLabs/co-snarks", rev = "24bb6be6d19d6cc0a2ef5addaec904c795f1ae1f" }
+noir-types = { version = "0.1.1", git = "https://github.com/TaceoLabs/co-snarks", rev = "24bb6be6d19d6cc0a2ef5addaec904c795f1ae1f" }
+eyre = "0.6.12"
+mpc-core = { version = "0.10.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "24bb6be6d19d6cc0a2ef5addaec904c795f1ae1f" }
+mpc-net = { version = "0.5.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "24bb6be6d19d6cc0a2ef5addaec904c795f1ae1f", features = [
+  "local",
+] }
+noirc-artifacts = { version = "1.0.0-beta.15", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.15", package = "noirc_artifacts" }
+num-bigint = { version = "0.4.6" }

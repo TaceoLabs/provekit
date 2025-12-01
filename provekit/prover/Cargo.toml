@@ -11,26 +11,25 @@ repository.workspace = true
 [dependencies]
 # Workspace crates
 provekit-common.workspace = true
-skyscraper.workspace = true
 
 # Noir language
 acir.workspace = true
-bn254_blackbox_solver.workspace = true
-nargo.workspace = true
-noir_artifact_cli.workspace = true
-noirc_abi.workspace = true
 
 # Cryptography and proof systems
 ark-ff.workspace = true
 ark-std.workspace = true
-spongefish.workspace = true
-whir.workspace = true
 
 # 3rd party
 anyhow.workspace = true
 rand.workspace = true
-rayon.workspace = true
 tracing.workspace = true
+
+# TACEO related imports (what we need for our code):
+mpc-net.workspace = true
+co-acvm.workspace = true
+eyre.workspace = true
+mpc-core.workspace = true
+co-noir-types.workspace = true
 
 [lints]
 workspace = true

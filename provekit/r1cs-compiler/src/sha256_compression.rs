@@ -96,10 +96,10 @@ pub(crate) fn add_right_rotate(
 
     // Create witness for low_bits << (32-n)
     let shifted_low_witness = r1cs_compiler.num_witnesses();
-    r1cs_compiler.add_witness_builder(WitnessBuilder::Sum(shifted_low_witness, vec![SumTerm(
-        Some(shift_multiplier),
-        low_bits_witness,
-    )]));
+    r1cs_compiler.add_witness_builder(WitnessBuilder::Sum(
+        shifted_low_witness,
+        vec![SumTerm(Some(shift_multiplier), low_bits_witness)],
+    ));
 
     // Constraint: shifted_low = low_bits * 2^(32-n)
     r1cs_compiler.r1cs.add_constraint(
@@ -112,10 +112,13 @@ pub(crate) fn add_right_rotate(
     // Since high_bits occupies lower (32-n) bits and shifted_low occupies
     // upper n bits with no overlap, XOR equals addition in this case.
     let result_witness = r1cs_compiler.num_witnesses();
-    r1cs_compiler.add_witness_builder(WitnessBuilder::Sum(result_witness, vec![
-        SumTerm(None, high_bits_witness),
-        SumTerm(None, shifted_low_witness),
-    ]));
+    r1cs_compiler.add_witness_builder(WitnessBuilder::Sum(
+        result_witness,
+        vec![
+            SumTerm(None, high_bits_witness),
+            SumTerm(None, shifted_low_witness),
+        ],
+    ));
 
     // Constraint: result = high_bits + shifted_low
     r1cs_compiler.r1cs.add_constraint(
@@ -349,10 +352,13 @@ pub(crate) fn add_ch(
     // NOT usage increases significantly.
     let max_u32 = FieldElement::from((1u64 << 32) - 1);
     let not_x_witness = r1cs_compiler.num_witnesses();
-    r1cs_compiler.add_witness_builder(WitnessBuilder::Sum(not_x_witness, vec![
-        SumTerm(Some(max_u32), r1cs_compiler.witness_one()),
-        SumTerm(Some(-FieldElement::ONE), x_witness),
-    ]));
+    r1cs_compiler.add_witness_builder(WitnessBuilder::Sum(
+        not_x_witness,
+        vec![
+            SumTerm(Some(max_u32), r1cs_compiler.witness_one()),
+            SumTerm(Some(-FieldElement::ONE), x_witness),
+        ],
+    ));
 
     // Constraint: not_x = 0xFFFFFFFF - x
     r1cs_compiler.r1cs.add_constraint(

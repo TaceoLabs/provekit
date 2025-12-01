@@ -2,7 +2,7 @@ use {
     crate::{
         binops::{add_binop_constraints, BinOp},
         memory::{add_ram_checking, add_rom_checking, MemoryBlock, MemoryOperation},
-        range_check::add_range_checks,
+        range_check::add_range_check_via_bit_decomposition,
         sha256_compression::add_sha256_compression,
     },
     acir::{
@@ -12,8 +12,8 @@ use {
         },
         native_types::{Expression, Witness as NoirWitness},
     },
-    anyhow::{bail, Result},
     ark_std::One,
+    eyre::bail,
     provekit_common::{
         utils::noir_to_native,
         witness::{ConstantOrR1CSWitness, ConstantTerm, SumTerm, WitnessBuilder},
@@ -35,13 +35,17 @@ pub(crate) struct NoirToR1CSCompiler {
 
     /// The ACIR witness indices of the initial values of the memory blocks
     pub initial_memories: BTreeMap<usize, Vec<usize>>,
+
+    /// Public inputs of the noir circuit
+    pub public_inputs: Vec<u32>,
 }
 
 /// Compile a Noir circuit to a R1CS relation, returning the R1CS and a map from
 /// Noir witness indices to R1CS witness indices.
+#[expect(clippy::type_complexity)]
 pub fn noir_to_r1cs(
     circuit: &Circuit<NoirElement>,
-) -> Result<(R1CS, Vec<Option<NonZeroU32>>, Vec<WitnessBuilder>)> {
+) -> eyre::Result<(R1CS, Vec<Option<NonZeroU32>>, Vec<WitnessBuilder>, Vec<u32>)> {
     let mut compiler = NoirToR1CSCompiler::new();
     compiler.add_circuit(circuit)?;
     Ok(compiler.finalize())
@@ -65,11 +69,12 @@ impl NoirToR1CSCompiler {
             ))],
             acir_to_r1cs_witness_map: BTreeMap::new(),
             initial_memories: BTreeMap::new(),
+            public_inputs: vec![],
         }
     }
 
     /// Returns the R1CS and the witness map
-    pub fn finalize(self) -> (R1CS, Vec<Option<NonZeroU32>>, Vec<WitnessBuilder>) {
+    pub fn finalize(self) -> (R1CS, Vec<Option<NonZeroU32>>, Vec<WitnessBuilder>, Vec<u32>) {
         // Convert witness map to vector
         let len = self
             .acir_to_r1cs_witness_map
@@ -82,7 +87,7 @@ impl NoirToR1CSCompiler {
             map[acir_witness_idx] =
                 Some(NonZeroU32::new(r1cs_witness_idx as u32).expect("Index zero is reserved"));
         }
-        (self.r1cs, map, self.witness_builders)
+        (self.r1cs, map, self.witness_builders, self.public_inputs)
     }
 
     /// Index of the constant one witness
@@ -227,7 +232,10 @@ impl NoirToR1CSCompiler {
         self.r1cs.add_constraint(&a, &b, &linear);
     }
 
-    pub fn add_circuit(&mut self, circuit: &Circuit<NoirElement>) -> Result<()> {
+    pub fn add_circuit(&mut self, circuit: &Circuit<NoirElement>) -> eyre::Result<()> {
+        self.public_inputs = circuit.public_inputs().indices();
+        self.r1cs.num_public_inputs += self.public_inputs.len();
+
         // Read-only memory blocks (used for building the memory lookup constraints at
         // the end)
         let mut memory_blocks: BTreeMap<usize, MemoryBlock> = BTreeMap::new();
@@ -319,11 +327,7 @@ impl NoirToR1CSCompiler {
                 }
 
                 Opcode::BlackBoxFuncCall(black_box_func_call) => match black_box_func_call {
-                    BlackBoxFuncCall::RANGE {
-                        input: function_input,
-                        num_bits,
-                    } => {
-                        let input = *function_input;
+                    BlackBoxFuncCall::RANGE { input, num_bits } => {
                         let input_witness = match input {
                             ConstantOrACIRWitness::Constant(_) => {
                                 panic!(
@@ -332,13 +336,10 @@ impl NoirToR1CSCompiler {
                                 );
                             }
                             ConstantOrACIRWitness::Witness(witness) => {
-                                self.fetch_r1cs_witness_index(witness)
+                                self.fetch_r1cs_witness_index(*witness)
                             }
                         };
-                        // println!(
-                        //     "RANGE CHECK of witness {} to {} bits",
-                        //     input_witness, num_bits
-                        // );
+                        // println!("RANGE CHECK of witness {input_witness} to {num_bits} bits");
                         // Add the entry into the range blocks.
                         range_checks
                             .entry(*num_bits)
@@ -438,7 +439,11 @@ impl NoirToR1CSCompiler {
         add_binop_constraints(self, BinOp::Xor, xor_ops);
 
         // Perform all range checks
-        add_range_checks(self, range_checks);
+        if !range_checks.is_empty() {
+            // add_range_checks(self, range_checks);
+            // We don't have lookup tables so we implement a bitdecomposition-based range check
+            add_range_check_via_bit_decomposition(self, range_checks);
+        }
 
         Ok(())
     }

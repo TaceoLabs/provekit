@@ -14,7 +14,8 @@ pub use {
     digits::{decompose_into_digits, DigitalDecompositionWitnesses},
     ram::{SpiceMemoryOperation, SpiceWitnesses},
     witness_builder::{
-        ConstantTerm, ProductLinearTerm, SumTerm, WitnessBuilder, WitnessCoefficient,
+        ConstantTerm, MockTranscript, ProductLinearTerm, SumTerm, WitnessBuilder,
+        WitnessCoefficient,
     },
     witness_generator::NoirWitnessGenerator,
 };

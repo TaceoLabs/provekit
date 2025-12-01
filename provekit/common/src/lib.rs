@@ -11,8 +11,8 @@ use crate::{
     sparse_matrix::{HydratedSparseMatrix, SparseMatrix},
 };
 pub use {
-    acir::FieldElement as NoirElement, noir_proof_scheme::NoirProofScheme, r1cs::R1CS,
-    whir::crypto::fields::Field256 as FieldElement,
+    acir::FieldElement as NoirElement, ark_bn254::Fr as FieldElement,
+    noir_proof_scheme::NoirProofScheme, r1cs::R1CS,
 };
 
 #[cfg(test)]
