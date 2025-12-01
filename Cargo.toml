@@ -1,11 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-  "skyscraper/fp-rounding",
-  "skyscraper/hla",
-  "skyscraper/block-multiplier",
-  "skyscraper/block-multiplier-codegen",
-  "skyscraper/core",
   "provekit/common",
   "provekit/r1cs-compiler",
   "provekit/prover",
@@ -14,11 +9,8 @@ members = [
   "tooling/provekit-bench",
   "tooling/provekit-gnark",
   "tooling/verifier-server",
-  "ntt",
 ]
-exclude = [
-  "playground/passport-input-gen",
-]
+exclude = ["playground/passport-input-gen"]
 
 [workspace.package]
 edition = "2021"
@@ -121,8 +113,8 @@ tower-http = { version = "0.6.6", features = ["cors", "timeout", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "ansi"] }
 tracing-tracy = "=0.11.4"
-tracy-client= "=0.18.0"
-tracy-client-sys= "=0.24.3"
+tracy-client = "=0.18.0"
+tracy-client-sys = "=0.24.3"
 zerocopy = "0.8.25"
 zeroize = "1.8.1"
 zstd = "0.13.3"
@@ -151,4 +143,6 @@ spongefish = { git = "https://github.com/arkworks-rs/spongefish", features = [
   "arkworks-algebra",
 ], rev = "ecb4f08373ed930175585c856517efdb1851fb47" }
 spongefish-pow = { git = "https://github.com/arkworks-rs/spongefish", rev = "ecb4f08373ed930175585c856517efdb1851fb47" }
-whir = { git = "https://github.com/WizardOfMenlo/whir/", features = ["tracing"], rev = "15cf6668e904ed2e80c9e6209dcce69f5bcf79b9" }
+whir = { git = "https://github.com/WizardOfMenlo/whir/", features = [
+  "tracing",
+], rev = "15cf6668e904ed2e80c9e6209dcce69f5bcf79b9" }
