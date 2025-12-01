@@ -10,7 +10,6 @@ repository.workspace = true
 
 [dependencies]
 # Workspace crates
-skyscraper.workspace = true
 
 # Noir language
 acir.workspace = true

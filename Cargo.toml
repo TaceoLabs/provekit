@@ -1,15 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-  "provekit/common",
-  "provekit/r1cs-compiler",
-  "provekit/prover",
-  "provekit/verifier",
-  "tooling/cli",
-  "tooling/provekit-bench",
-  "tooling/provekit-gnark",
-  "tooling/verifier-server",
-]
+members = ["provekit/common", "provekit/r1cs-compiler"]
 exclude = ["playground/passport-input-gen"]
 
 [workspace.package]
@@ -62,13 +53,6 @@ opt-level = 2
 opt-level = 3
 
 [workspace.dependencies]
-# Workspace members - Skyscraper
-block-multiplier = { path = "skyscraper/block-multiplier" }
-block-multiplier-codegen = { path = "skyscraper/block-multiplier-codegen" }
-fp-rounding = { path = "skyscraper/fp-rounding" }
-hla = { path = "skyscraper/hla" }
-skyscraper = { path = "skyscraper/core" }
-
 # Workspace members - ProveKit
 provekit-bench = { path = "tooling/provekit-bench" }
 provekit-cli = { path = "tooling/cli" }
