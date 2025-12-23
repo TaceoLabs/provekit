@@ -4,7 +4,6 @@ use {
         memory::{add_ram_checking, add_rom_checking, MemoryBlock, MemoryOperation},
         poseidon2::add_poseidon2_permutation,
         range_check::add_range_check_via_bit_decomposition,
-        range_check::add_range_checks,
         sha256_compression::add_sha256_compression,
     },
     acir::{
@@ -378,14 +377,15 @@ impl NoirToR1CSCompiler {
                             self.fetch_r1cs_witness_index(*output),
                         ));
                     }
-                    BlackBoxFuncCall::Poseidon2Permutation {
-                        inputs,
-                        outputs,
-                        len,
-                    } => {
-                        assert_eq!(inputs.len() as u32, *len, "Poseidon2: inputs.len != len");
-                        assert_eq!(outputs.len() as u32, *len, "Poseidon2: outputs.len != len");
-                        let t = *len;
+                    BlackBoxFuncCall::Poseidon2Permutation { inputs, outputs } => {
+                        if inputs.len() != outputs.len() {
+                            Err(eyre::eyre!(
+                                "the input and output sizes are not consistent. {} != {}",
+                                inputs.len(),
+                                outputs.len()
+                            ))?;
+                        }
+                        let t = inputs.len() as u32;
 
                         // Only these widths are allowed for Poseidon2
                         assert!(
@@ -396,7 +396,7 @@ impl NoirToR1CSCompiler {
                         // Convert ACIR inputs to (Constant | Witness)
                         let in_wits: Vec<ConstantOrR1CSWitness> = inputs
                             .iter()
-                            .map(|inp| self.fetch_constant_or_r1cs_witness(inp.input()))
+                            .map(|inp| self.fetch_constant_or_r1cs_witness(*inp))
                             .collect();
 
                         let out_wits: Vec<usize> = outputs
