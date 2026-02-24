@@ -1,10 +1,7 @@
 #[cfg(test)]
 use crate::r1cs::R1CSSolver;
 use {
-    crate::{
-        r1cs::{CompressedLayers, CompressedR1CS},
-        whir_r1cs::WhirR1CSProver,
-    },
+    crate::r1cs::{CompressedLayers, CompressedR1CS},
     acir::native_types::WitnessMap,
     anyhow::{Context, Result},
     bn254_blackbox_solver::Bn254BlackBoxSolver,
@@ -25,6 +22,8 @@ pub mod input_utils;
 mod r1cs;
 mod whir_r1cs;
 mod witness;
+
+pub use whir_r1cs::{BlindingState, WhirR1CSCommitment, WhirR1CSProver};
 
 pub trait Prove {
     fn prove(self, prover_toml: impl AsRef<Path>) -> Result<NoirProof>;
